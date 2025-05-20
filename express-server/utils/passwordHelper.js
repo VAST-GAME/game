@@ -1,0 +1,8 @@
+// utils/passwordHelper.js
+const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+
+const validatePassword = (password) => {
+  return passwordRegex.test(password);
+};
+
+module.exports = { validatePassword };
