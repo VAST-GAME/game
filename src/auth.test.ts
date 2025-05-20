@@ -1,160 +1,164 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import request from "supertest";
 import express from "express";
-import dotenv from "dotenv";
-import jwt from "jsonwebtoken";
+import cors from "cors";
+import authRoutes from "./routes/auth";
 
-dotenv.config();
-
-// Mock Express app for testing
 const app = express();
+app.use(cors());
 app.use(express.json());
+app.use("/api/auth", authRoutes);
 
-// Mock user database for testing
-const users: { id: number; username: string; password: string }[] = [];
+describe("Authentication API", () => {
+  let authToken: string;
+  const testUser = {
+    email: "test@example.com",
+    password: "Test123!@#",
+  };
 
-describe("Authentication System Tests", () => {
-  let server: any;
-  let testToken: string;
+  describe("POST /api/auth/register", () => {
+    it("should register a new user", async () => {
+      const res = await request(app).post("/api/auth/register").send(testUser);
 
-  beforeAll(() => {
-    server = app.listen(3001);
-  });
-
-  afterAll(() => {
-    server.close();
-  });
-
-  describe("User Registration", () => {
-    it("should successfully register a new user", async () => {
-      const response = await request(app).post("/api/register").send({
-        username: "testuser",
-        password: "password123",
-      });
-
-      expect(response.status).toBe(201);
-      expect(response.body).toHaveProperty("token");
-      expect(typeof response.body.token).toBe("string");
+      expect(res.status).toBe(201);
+      expect(res.body.success).toBe(true);
+      expect(res.body.user.email).toBe(testUser.email);
     });
 
-    it("should not register a user with missing username", async () => {
-      const response = await request(app).post("/api/register").send({
-        password: "password123",
+    it("should not register with invalid email", async () => {
+      const res = await request(app).post("/api/auth/register").send({
+        email: "invalid-email",
+        password: testUser.password,
       });
 
-      expect(response.status).toBe(400);
-      expect(response.body).toHaveProperty("message");
+      expect(res.status).toBe(400);
+      expect(res.body.success).toBe(false);
     });
 
-    it("should not register a user with missing password", async () => {
-      const response = await request(app).post("/api/register").send({
-        username: "testuser2",
+    it("should not register with weak password", async () => {
+      const res = await request(app).post("/api/auth/register").send({
+        email: "test2@example.com",
+        password: "weak",
       });
 
-      expect(response.status).toBe(400);
-      expect(response.body).toHaveProperty("message");
+      expect(res.status).toBe(400);
+      expect(res.body.success).toBe(false);
     });
 
-    it("should not register a user with existing username", async () => {
-      const response = await request(app).post("/api/register").send({
-        username: "testuser",
-        password: "password123",
-      });
+    it("should not register with existing email", async () => {
+      const res = await request(app).post("/api/auth/register").send(testUser);
 
-      expect(response.status).toBe(409);
-      expect(response.body).toHaveProperty("message");
+      expect(res.status).toBe(400);
+      expect(res.body.success).toBe(false);
     });
   });
 
-  describe("User Login", () => {
-    it("should successfully login with valid credentials", async () => {
-      const response = await request(app).post("/api/login").send({
-        username: "testuser",
-        password: "password123",
-      });
+  describe("POST /api/auth/login", () => {
+    it("should login with valid credentials", async () => {
+      const res = await request(app).post("/api/auth/login").send(testUser);
 
-      expect(response.status).toBe(200);
-      expect(response.body).toHaveProperty("token");
-      testToken = response.body.token;
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.token).toBeDefined();
+      authToken = res.body.token;
     });
 
-    it("should not login with invalid username", async () => {
-      const response = await request(app).post("/api/login").send({
-        username: "nonexistentuser",
-        password: "password123",
+    it("should not login with invalid email", async () => {
+      const res = await request(app).post("/api/auth/login").send({
+        email: "wrong@example.com",
+        password: testUser.password,
       });
 
-      expect(response.status).toBe(401);
-      expect(response.body).toHaveProperty("message");
+      expect(res.status).toBe(401);
+      expect(res.body.success).toBe(false);
     });
 
     it("should not login with invalid password", async () => {
-      const response = await request(app).post("/api/login").send({
-        username: "testuser",
+      const res = await request(app).post("/api/auth/login").send({
+        email: testUser.email,
         password: "wrongpassword",
       });
 
-      expect(response.status).toBe(401);
-      expect(response.body).toHaveProperty("message");
+      expect(res.status).toBe(401);
+      expect(res.body.success).toBe(false);
     });
 
-    it("should not login with missing credentials", async () => {
-      const response = await request(app).post("/api/login").send({});
+    it("should respect rate limiting", async () => {
+      // Try to login 4 times
+      for (let i = 0; i < 4; i++) {
+        await request(app).post("/api/auth/login").send({
+          email: testUser.email,
+          password: "wrongpassword",
+        });
+      }
 
-      expect(response.status).toBe(400);
-      expect(response.body).toHaveProperty("message");
+      const res = await request(app).post("/api/auth/login").send({
+        email: testUser.email,
+        password: "wrongpassword",
+      });
+
+      expect(res.status).toBe(429);
+      expect(res.body.success).toBe(false);
     });
   });
 
-  describe("Protected Routes", () => {
+  describe("GET /api/auth/protected", () => {
     it("should access protected route with valid token", async () => {
-      const response = await request(app)
-        .get("/api/protected")
-        .set("Authorization", `Bearer ${testToken}`);
+      const res = await request(app)
+        .get("/api/auth/protected")
+        .set("Authorization", `Bearer ${authToken}`);
 
-      expect(response.status).toBe(200);
-      expect(response.body).toHaveProperty("message");
-      expect(response.body).toHaveProperty("user");
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.user).toBeDefined();
     });
 
     it("should not access protected route without token", async () => {
-      const response = await request(app).get("/api/protected");
+      const res = await request(app).get("/api/auth/protected");
 
-      expect(response.status).toBe(401);
-      expect(response.body).toHaveProperty("message");
-    });
-
-    it("should not access protected route with invalid token", async () => {
-      const response = await request(app)
-        .get("/api/protected")
-        .set("Authorization", "Bearer invalid-token");
-
-      expect(response.status).toBe(403);
-      expect(response.body).toHaveProperty("message");
-    });
-
-    it("should not access protected route with malformed token", async () => {
-      const response = await request(app)
-        .get("/api/protected")
-        .set("Authorization", "Bearer");
-
-      expect(response.status).toBe(401);
-      expect(response.body).toHaveProperty("message");
+      expect(res.status).toBe(401);
+      expect(res.body.success).toBe(false);
     });
   });
 
-  describe("Token Validation", () => {
-    it("should validate token format", () => {
-      const token = testToken;
-      expect(token).toMatch(
-        /^[A-Za-z0-9-_=]+\.[A-Za-z0-9-_=]+\.?[A-Za-z0-9-_.+/=]*$/
-      );
+  describe("POST /api/auth/logout", () => {
+    it("should logout successfully", async () => {
+      const res = await request(app)
+        .post("/api/auth/logout")
+        .send({ email: testUser.email });
+
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
     });
 
-    it("should decode token and contain user information", () => {
-      const decoded = jwt.decode(testToken);
-      expect(decoded).toHaveProperty("id");
-      expect(decoded).toHaveProperty("username");
+    it("should not logout with non-existent email", async () => {
+      const res = await request(app)
+        .post("/api/auth/logout")
+        .send({ email: "nonexistent@example.com" });
+
+      expect(res.status).toBe(404);
+      expect(res.body.success).toBe(false);
+    });
+  });
+
+  describe("POST /api/auth/forgot-password", () => {
+    it("should generate reset token for valid email", async () => {
+      const res = await request(app)
+        .post("/api/auth/forgot-password")
+        .send({ email: testUser.email });
+
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.resetToken).toBeDefined();
+    });
+
+    it("should not generate reset token for invalid email", async () => {
+      const res = await request(app)
+        .post("/api/auth/forgot-password")
+        .send({ email: "nonexistent@example.com" });
+
+      expect(res.status).toBe(404);
+      expect(res.body.success).toBe(false);
     });
   });
 });

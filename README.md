@@ -1,19 +1,20 @@
-# Authentication System with Node.js and TypeScript
+# Authentication API
 
-This is a simple authentication system built with Node.js, Express, and TypeScript. It includes JWT-based authentication, user registration, login, and protected routes.
+A secure Express.js API with authentication endpoints and comprehensive validation.
 
 ## Features
 
-- User registration and login
-- JWT-based authentication
-- Protected routes
-- TypeScript support
-- Vitest for testing
+- User registration with email and password validation
+- Login with rate limiting
+- Protected routes with JWT authentication
+- Password reset functionality
+- Logout mechanism
+- Comprehensive test suite
 
 ## Prerequisites
 
 - Node.js (v14 or higher)
-- npm
+- npm or yarn
 
 ## Installation
 
@@ -22,54 +23,214 @@ This is a simple authentication system built with Node.js, Express, and TypeScri
    ```bash
    npm install
    ```
-3. Create a `.env` file in the root directory with the following content:
+3. Create a `.env` file in the root directory with the following variables:
    ```
    PORT=3000
-   JWT_SECRET=your-super-secret-key-change-this-in-production
+   JWT_SECRET=your-secret-key
+   ```
+4. Start the development server:
+   ```bash
+   npm run dev
    ```
 
-## Available Scripts
+## API Documentation
 
-- `npm run dev` - Start the development server
-- `npm run build` - Build the TypeScript code
-- `npm start` - Start the production server
-- `npm test` - Run tests
-- `npm run test:watch` - Run tests in watch mode
+### Authentication Endpoints
 
-## API Endpoints
+#### Register User
 
-### Register
+```http
+POST /api/auth/register
+Content-Type: application/json
 
-- **POST** `/api/register`
-- Body: `{ "username": "string", "password": "string" }`
-- Returns: JWT token
+{
+  "email": "user@example.com",
+  "password": "Password123!@#"
+}
+```
 
-### Login
+**Password Requirements:**
 
-- **POST** `/api/login`
-- Body: `{ "username": "string", "password": "string" }`
-- Returns: JWT token
+- Minimum 8 characters
+- At least one letter
+- At least one number
+- At least one special character
 
-### Protected Route
+**Response:**
 
-- **GET** `/api/protected`
-- Headers: `Authorization: Bearer <token>`
-- Returns: Protected data
+```json
+{
+  "success": true,
+  "message": "Registration successful",
+  "user": {
+    "id": "uuid",
+    "email": "user@example.com"
+  }
+}
+```
+
+#### Login
+
+```http
+POST /api/auth/login
+Content-Type: application/json
+
+{
+  "email": "user@example.com",
+  "password": "Password123!@#"
+}
+```
+
+**Rate Limiting:**
+
+- Maximum 3 attempts per hour per email
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "message": "Login successful",
+  "token": "jwt-token",
+  "user": {
+    "id": "uuid",
+    "email": "user@example.com"
+  }
+}
+```
+
+#### Protected Route
+
+```http
+GET /api/auth/protected
+Authorization: Bearer <jwt-token>
+```
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "message": "This is a protected route",
+  "user": {
+    "id": "uuid",
+    "email": "user@example.com"
+  }
+}
+```
+
+#### Logout
+
+```http
+POST /api/auth/logout
+Content-Type: application/json
+
+{
+  "email": "user@example.com"
+}
+```
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "message": "Logged out successfully"
+}
+```
+
+#### Forgot Password
+
+```http
+POST /api/auth/forgot-password
+Content-Type: application/json
+
+{
+  "email": "user@example.com"
+}
+```
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "message": "Password reset token generated",
+  "resetToken": "reset-token"
+}
+```
+
+#### Reset Password
+
+```http
+POST /api/auth/reset-password
+Content-Type: application/json
+
+{
+  "token": "reset-token",
+  "newPassword": "NewPassword123!@#"
+}
+```
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "message": "Password reset successful"
+}
+```
+
+## Error Responses
+
+All endpoints return error responses in the following format:
+
+```json
+{
+  "success": false,
+  "message": "Error message"
+}
+```
+
+Common HTTP Status Codes:
+
+- 200: Success
+- 201: Created
+- 400: Bad Request
+- 401: Unauthorized
+- 404: Not Found
+- 429: Too Many Requests
 
 ## Testing
 
-The project uses Vitest for testing. Run the tests using:
+Run the test suite:
 
 ```bash
 npm test
 ```
 
-## Security Notes
+Run tests in watch mode:
 
-- In a production environment, make sure to:
-  - Use a strong JWT secret
-  - Implement proper password validation
-  - Use HTTPS
-  - Add rate limiting
-  - Implement proper error handling
-  - Use a real database instead of in-memory storage
+```bash
+npm run test:watch
+```
+
+## Security Features
+
+1. Password hashing using bcrypt
+2. JWT-based authentication
+3. Rate limiting for login attempts
+4. Input validation for email and password
+5. Secure password reset flow
+6. CORS enabled
+7. Environment variable configuration
+
+## Production Considerations
+
+1. Use a proper database instead of in-memory storage
+2. Implement proper email service for password reset
+3. Use HTTPS in production
+4. Set up proper logging
+5. Implement request validation middleware
+6. Add API documentation using Swagger/OpenAPI
+7. Set up proper error handling middleware
