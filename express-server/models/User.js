@@ -1,69 +1,86 @@
-// models/User.js
+const { DataTypes, Model } = require("sequelize");
 const bcrypt = require("bcryptjs");
-const db = require("../database/setup"); // Use the initialized db connection
+const jwt = require("jsonwebtoken");
+const { sequelize } = require("../config/database");
 
-class User {
-  static async create({ email, password, profile = {} }) {
-    const hashedPassword = await bcrypt.hash(password, 10);
-    const sql = `INSERT INTO users (email, password, profile) VALUES (?, ?, ?)`;
-    // profile should be a JSON string
-    const profileString = JSON.stringify(profile);
-
-    return new Promise((resolve, reject) => {
-      // 'this' refers to the statement object in 'run', not the class instance
-      // So we use db.run and get the lastID from the callback.
-      db.run(sql, [email, hashedPassword, profileString], function (err) {
-        if (err) {
-          // Handle specific errors like UNIQUE constraint violation for email
-          if (err.message.includes("UNIQUE constraint failed: users.email")) {
-            return reject(new Error("Email already exists"));
-          }
-          return reject(err);
-        }
-        resolve({ id: this.lastID, email, profile });
-      });
-    });
+class User extends Model {
+  // Instance method to check if password matches
+  async matchPassword(enteredPassword) {
+    return await bcrypt.compare(enteredPassword, this.password);
   }
 
-  static findByEmail(email) {
-    const sql = `SELECT id, email, password, profile FROM users WHERE email = ?`;
-    return new Promise((resolve, reject) => {
-      db.get(sql, [email], (err, row) => {
-        if (err) return reject(err);
-        if (row && row.profile) {
-          try {
-            row.profile = JSON.parse(row.profile);
-          } catch (e) {
-            console.error("Failed to parse profile JSON for user:", row.email, e);
-            row.profile = {}; // Default to empty object if parsing fails
-          }
-        }
-        resolve(row);
-      });
-    });
-  }
-
-  static findById(id) {
-    const sql = `SELECT id, email, profile FROM users WHERE id = ?`; // Exclude password
-    return new Promise((resolve, reject) => {
-      db.get(sql, [id], (err, row) => {
-        if (err) return reject(err);
-        if (row && row.profile) {
-          try {
-            row.profile = JSON.parse(row.profile);
-          } catch (e) {
-            console.error("Failed to parse profile JSON for user ID:", row.id, e);
-            row.profile = {};
-          }
-        }
-        resolve(row);
-      });
-    });
-  }
-
-  static async comparePassword(candidatePassword, hashedPassword) {
-    return bcrypt.compare(candidatePassword, hashedPassword);
+  // Instance method to get a signed JWT token
+  getSignedJwtToken() {
+    return jwt.sign({ id: this.id }, process.env.JWT_SECRET || "your_jwt_secret", { expiresIn: process.env.JWT_EXPIRE || "1h" });
   }
 }
+
+User.init(
+  {
+    id: {
+      type: DataTypes.INTEGER,
+      primaryKey: true,
+      autoIncrement: true,
+    },
+    email: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      unique: true,
+      validate: {
+        isEmail: {
+          msg: "Please provide a valid email address",
+        },
+      },
+    },
+    password: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      validate: {
+        len: {
+          args: [8, 100],
+          msg: "Password must be at least 8 characters long",
+        },
+      },
+    },
+    resetPasswordToken: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    resetPasswordExpire: {
+      type: DataTypes.DATE,
+      allowNull: true,
+    },
+    createdAt: {
+      type: DataTypes.DATE,
+      defaultValue: DataTypes.NOW,
+    },
+    updatedAt: {
+      type: DataTypes.DATE,
+      defaultValue: DataTypes.NOW,
+    },
+  },
+  {
+    sequelize,
+    modelName: "User",
+    tableName: "users",
+    timestamps: true,
+    hooks: {
+      // Hook to hash password before saving
+      beforeCreate: async (user) => {
+        if (user.password) {
+          const salt = await bcrypt.genSalt(10);
+          user.password = await bcrypt.hash(user.password, salt);
+        }
+      },
+      // Hook to hash password before update (if changed)
+      beforeUpdate: async (user) => {
+        if (user.changed("password")) {
+          const salt = await bcrypt.genSalt(10);
+          user.password = await bcrypt.hash(user.password, salt);
+        }
+      },
+    },
+  }
+);
 
 module.exports = User;

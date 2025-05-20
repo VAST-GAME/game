@@ -1,32 +1,82 @@
-// controllers/authController.js
 const User = require("../models/User");
-const { generateToken } = require("../utils/jwtHelper");
-const { validatePassword } = require("../utils/passwordHelper"); // Assuming this helper is still relevant
-const { validationResult } = require("express-validator");
+const { validateRequest } = require("../utils/errorHandler");
 
-// POST /api/login
-exports.loginUser = async (req, res, next) => {
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-    return res.status(400).json({ errors: errors.array() });
-  }
-
-  const { email, password } = req.body;
-
+// @desc    Register user
+// @route   POST /api/register
+// @access  Public
+exports.register = async (req, res, next) => {
   try {
-    const user = await User.findByEmail(email);
+    // Check validation
+    validateRequest(req, res, () => {});
+
+    const { email, password } = req.body;
+
+    // Check if user already exists
+    const userExists = await User.findOne({ where: { email } });
+    if (userExists) {
+      return res.status(400).json({
+        success: false,
+        message: "Email already registered",
+      });
+    }
+
+    // Create user
+    const user = await User.create({
+      email,
+      password,
+    });
+
+    // Generate JWT token
+    const token = user.getSignedJwtToken();
+
+    // Send response
+    res.status(201).json({
+      success: true,
+      token,
+      message: "Registration successful",
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Login user
+// @route   POST /api/login
+// @access  Public
+exports.login = async (req, res, next) => {
+  try {
+    // Check validation
+    validateRequest(req, res, () => {});
+
+    const { email, password } = req.body;
+
+    // Find user
+    const user = await User.findOne({ where: { email } });
+
+    // Check if user exists
     if (!user) {
-      return res.status(401).json({ message: "Invalid credentials" });
+      return res.status(401).json({
+        success: false,
+        message: "Invalid credentials",
+      });
     }
 
-    const isMatch = await User.comparePassword(password, user.password);
+    // Check if password matches
+    const isMatch = await user.matchPassword(password);
     if (!isMatch) {
-      return res.status(401).json({ message: "Invalid credentials" });
+      return res.status(401).json({
+        success: false,
+        message: "Invalid credentials",
+      });
     }
 
-    const token = generateToken(user.id); // Use user.id from SQLite
+    // Generate JWT token
+    const token = user.getSignedJwtToken();
+
+    // Send response
     res.status(200).json({
-      token: token,
+      success: true,
+      token,
       message: "Login successful",
     });
   } catch (error) {
@@ -34,47 +84,67 @@ exports.loginUser = async (req, res, next) => {
   }
 };
 
-// POST /api/register
-exports.registerUser = async (req, res, next) => {
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-    return res.status(400).json({ errors: errors.array() });
-  }
-
-  const { email, password } = req.body;
-
-  // Password complexity validation (from README)
-  if (!validatePassword(password)) {
-    return res.status(400).json({ message: "Password does not meet requirements (min 8 characters, special chars, numbers, uppercase)." });
-  }
-
+// @desc    Logout user
+// @route   POST /api/logout
+// @access  Private
+exports.logout = (req, res, next) => {
   try {
-    // User.create will handle email uniqueness check by rejecting if email exists
-    const newUser = await User.create({ email, password, profile: {} }); // Default empty profile
-    const token = generateToken(newUser.id);
-    res.status(201).json({
-      token: token,
-      message: "Registration successful",
+    // In a real-world scenario, you might want to invalidate the token
+    // This could involve storing invalid tokens in a blacklist or using
+    // short-lived tokens with refresh tokens
+
+    res.status(200).json({
+      success: true,
+      message: "Logged out successfully",
     });
   } catch (error) {
-    if (error.message === "Email already exists") {
-      return res.status(400).json({ message: "Email already exists" });
-    }
     next(error);
   }
 };
 
-// POST /api/logout - remains the same conceptually
-exports.logoutUser = (req, res) => {
-  res.status(200).json({ message: "Logged out successfully" });
+// @desc    Forgot password
+// @route   POST /api/forget-password
+// @access  Public
+exports.forgotPassword = async (req, res, next) => {
+  try {
+    // Check validation
+    validateRequest(req, res, () => {});
+
+    const { email } = req.body;
+
+    // In a real application, you would:
+    // 1. Check if user exists
+    // 2. Generate a password reset token
+    // 3. Save the token to the user document with an expiry
+    // 4. Send an email with a reset link
+
+    // For security, we always respond with a success message
+    // even if the email doesn't exist in our database
+    res.status(200).json({
+      success: true,
+      message: "If an account exists with this email, you will receive a password reset link",
+    });
+  } catch (error) {
+    next(error);
+  }
 };
 
-// POST /api/forget-password - remains the same conceptually
-exports.forgetPassword = async (req, res, next) => {
-  // ... (validation and response logic as before)
-  const { email } = req.body;
-  console.log(`Password reset requested for: ${email}`);
-  res.status(200).json({
-    message: "If an account exists with this email, you will receive a password reset link",
-  });
+// @desc    Protected route test
+// @route   GET /api/protected
+// @access  Private
+exports.getProtected = (req, res, next) => {
+  try {
+    res.status(200).json({
+      success: true,
+      message: "This is a protected route",
+      data: {
+        user: {
+          id: req.user.id,
+          email: req.user.email,
+        },
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
 };

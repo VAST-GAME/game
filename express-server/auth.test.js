@@ -2,7 +2,7 @@ import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import request from "supertest";
 import express from "express";
 import cors from "cors";
-import authRoutes from "./routes/auth";
+import authRoutes from "./middleware/auth";
 
 const app = express();
 app.use(cors());
@@ -10,7 +10,7 @@ app.use(express.json());
 app.use("/api/auth", authRoutes);
 
 describe("Authentication API", () => {
-  let authToken: string;
+  let authToken;
   const testUser = {
     email: "test@example.com",
     password: "Test123!@#",
@@ -104,9 +104,7 @@ describe("Authentication API", () => {
 
   describe("GET /api/auth/protected", () => {
     it("should access protected route with valid token", async () => {
-      const res = await request(app)
-        .get("/api/auth/protected")
-        .set("Authorization", `Bearer ${authToken}`);
+      const res = await request(app).get("/api/auth/protected").set("Authorization", `Bearer ${authToken}`);
 
       expect(res.status).toBe(200);
       expect(res.body.success).toBe(true);
@@ -123,18 +121,14 @@ describe("Authentication API", () => {
 
   describe("POST /api/auth/logout", () => {
     it("should logout successfully", async () => {
-      const res = await request(app)
-        .post("/api/auth/logout")
-        .send({ email: testUser.email });
+      const res = await request(app).post("/api/auth/logout").send({ email: testUser.email });
 
       expect(res.status).toBe(200);
       expect(res.body.success).toBe(true);
     });
 
     it("should not logout with non-existent email", async () => {
-      const res = await request(app)
-        .post("/api/auth/logout")
-        .send({ email: "nonexistent@example.com" });
+      const res = await request(app).post("/api/auth/logout").send({ email: "nonexistent@example.com" });
 
       expect(res.status).toBe(404);
       expect(res.body.success).toBe(false);
@@ -143,9 +137,7 @@ describe("Authentication API", () => {
 
   describe("POST /api/auth/forgot-password", () => {
     it("should generate reset token for valid email", async () => {
-      const res = await request(app)
-        .post("/api/auth/forgot-password")
-        .send({ email: testUser.email });
+      const res = await request(app).post("/api/auth/forgot-password").send({ email: testUser.email });
 
       expect(res.status).toBe(200);
       expect(res.body.success).toBe(true);
@@ -153,9 +145,7 @@ describe("Authentication API", () => {
     });
 
     it("should generate reset token for invalid email", async () => {
-      const res = await request(app)
-        .post("/api/auth/forgot-password")
-        .send({ email: "nonexistent@example.com" });
+      const res = await request(app).post("/api/auth/forgot-password").send({ email: "nonexistent@example.com" });
 
       expect(res.status).toBe(200);
       expect(res.body.success).toBe(true);
@@ -163,17 +153,11 @@ describe("Authentication API", () => {
     });
 
     it("should handle malformed email input", async () => {
-      const textOnlyRes = await request(app)
-        .post("/api/auth/forgot-password")
-        .send({ email: "bademail" });
+      const textOnlyRes = await request(app).post("/api/auth/forgot-password").send({ email: "bademail" });
 
-      const textWithAtSignRes = await request(app)
-        .post("/api/auth/forgot-password")
-        .send({ email: "bademail@badending" });
+      const textWithAtSignRes = await request(app).post("/api/auth/forgot-password").send({ email: "bademail@badending" });
 
-      const textWithAtSignWithoutDotRes = await request(app)
-        .post("/api/auth/forgot-password")
-        .send({ email: "bademail@.baddoamin" });
+      const textWithAtSignWithoutDotRes = await request(app).post("/api/auth/forgot-password").send({ email: "bademail@.baddoamin" });
 
       expect(textOnlyRes.status).toBe(400);
       expect(textOnlyRes.body.success).toBe(false);
@@ -184,9 +168,7 @@ describe("Authentication API", () => {
     });
 
     it("should return JSON with error message on failure", async () => {
-      const res = await request(app)
-        .post("/api/auth/forgot-password")
-        .send({ email: "unknown@example.com" });
+      const res = await request(app).post("/api/auth/forgot-password").send({ email: "unknown@example.com" });
 
       expect(res.status).toBe(404);
       expect(res.body).toHaveProperty("message");
@@ -195,14 +177,10 @@ describe("Authentication API", () => {
 
     it("should not allow reset if rate limit exceeded", async () => {
       for (let i = 0; i < 5; i++) {
-        await request(app)
-          .post("/api/auth/forgot-password")
-          .send({ email: testUser.email });
+        await request(app).post("/api/auth/forgot-password").send({ email: testUser.email });
       }
 
-      const res = await request(app)
-        .post("/api/auth/forgot-password")
-        .send({ email: testUser.email });
+      const res = await request(app).post("/api/auth/forgot-password").send({ email: testUser.email });
 
       expect(res.status).toBe(429);
       expect(res.body.success).toBe(false);

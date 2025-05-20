@@ -1,45 +1,17 @@
-// routes/authRoutes.js
 const express = require("express");
-const { body } = require("express-validator");
-const authController = require("../controllers/authController");
-const { protect } = require("../middleware/authMiddleware");
-const { loginLimiter, forgetPasswordLimiter } = require("../middleware/rateLimitMiddleware");
-const { validatePassword } = require("../utils/passwordHelper");
-
 const router = express.Router();
+const { register, login, logout, forgotPassword, getProtected } = require("../controllers/authController");
+const { protect } = require("../middleware/auth");
+const { validateLogin, validateRegister, validateForgotPassword } = require("../utils/validators");
+const { loginLimiter, forgotPasswordLimiter } = require("../middleware/rateLimiter");
 
-// POST /api/login
-router.post(
-  "/login",
-  loginLimiter, // Apply rate limit
-  [body("email").isEmail().withMessage("Please enter a valid email").normalizeEmail(), body("password").notEmpty().withMessage("Password is required")],
-  authController.loginUser
-);
+// Public routes
+router.post("/register", validateRegister, register);
+router.post("/login", loginLimiter, validateLogin, login);
+router.post("/forget-password", forgotPasswordLimiter, validateForgotPassword, forgotPassword);
 
-// POST /api/register
-router.post(
-  "/register",
-  [
-    body("email").isEmail().withMessage("Please enter a valid email").normalizeEmail(),
-    body("password").custom((value) => {
-      if (!validatePassword(value)) {
-        throw new Error("Password must be min 8 characters, with special char, number, and uppercase letter.");
-      }
-      return true;
-    }),
-  ],
-  authController.registerUser
-);
-
-// POST /api/logout
-router.post("/logout", protect, authController.logoutUser);
-
-// POST /api/forget-password
-router.post(
-  "/forget-password",
-  forgetPasswordLimiter, // Apply rate limit
-  [body("email").isEmail().withMessage("Please enter a valid email or the format is incorrect.").normalizeEmail()],
-  authController.forgetPassword
-);
+// Protected routes
+router.post("/logout", protect, logout);
+router.get("/protected", protect, getProtected);
 
 module.exports = router;

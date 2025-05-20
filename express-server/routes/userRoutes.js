@@ -1,14 +1,9 @@
-// routes/userRoutes.js
 const express = require("express");
-const userController = require("../controllers/userController");
-const { protect } = require("../middleware/authMiddleware");
-
 const router = express.Router();
+const { getProfile } = require("../controllers/userController");
+const { protect } = require("../middleware/auth");
 
-// GET /api/protected
-router.get("/protected", protect, userController.getProtectedData);
-
-// GET /api/profile
-router.get("/profile", protect, userController.getUserProfile);
+// Protected routes
+router.get("/profile", protect, getProfile);
 
 module.exports = router;

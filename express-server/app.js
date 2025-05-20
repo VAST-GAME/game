@@ -1,37 +1,57 @@
-// app.js (snippet - changes)
 require("dotenv").config();
 const express = require("express");
-const helmet = require("helmet");
 const cors = require("cors");
-const db = require("./database/setup"); // Import the SQLite db instance
+const helmet = require("helmet");
+const morgan = require("morgan");
 
+// Import database
+const { sequelize } = require("./config/database");
+
+// Import routes
 const authRoutes = require("./routes/authRoutes");
 const userRoutes = require("./routes/userRoutes");
-const { errorHandler } = require("./middleware/errorHandler"); // You'll create this
 
+// Import error handler
+const { errorHandler } = require("./utils/errorHandler");
+
+// Initialize Express app
 const app = express();
 
+// Connect to SQLite database
+sequelize
+  .authenticate()
+  .then(() => {
+    console.log("SQLite database connected");
+    return sequelize.sync();
+  })
+  .then(() => console.log("Database synced"))
+  .catch((err) => console.error("Database connection error:", err));
+
 // Middleware
-app.use(helmet());
-app.use(cors());
-app.use(express.json());
+app.use(helmet()); // Security headers
+app.use(cors()); // Enable CORS
+app.use(express.json()); // Parse JSON requests
+app.use(morgan("dev")); // Logging
 
-// Make db available to routes if needed (e.g., via req.db)
-// Or import it directly in your models/controllers
-app.use((req, res, next) => {
-  req.db = db;
-  next();
-});
-
-// API Routes
+// Routes
 app.use("/api", authRoutes);
 app.use("/api", userRoutes);
 
-// Global Error Handler
+// Basic route
+app.get("/", (req, res) => {
+  res.json({ message: "Welcome to Secure Authentication API" });
+});
+
+// Error handling middleware
 app.use(errorHandler);
 
-const PORT = process.env.PORT || 3000;
+// Handle 404
+app.use((req, res) => {
+  res.status(404).json({ message: "Route not found" });
+});
 
+// Start server
+const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
