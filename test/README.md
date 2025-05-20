@@ -1,4 +1,4 @@
-# 🔐 Secure Authentication API
+# VAST Event Hackathon 
 
 A robust and secure authentication API that provides comprehensive user management functionality with rate limiting and security features.
 
