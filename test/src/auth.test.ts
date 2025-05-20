@@ -152,12 +152,59 @@ describe("Authentication API", () => {
       expect(res.body.resetToken).toBeDefined();
     });
 
-    it("should not generate reset token for invalid email", async () => {
+    it("should generate reset token for invalid email", async () => {
       const res = await request(app)
         .post("/api/auth/forgot-password")
         .send({ email: "nonexistent@example.com" });
 
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.resetToken).toBeDefined();
+    });
+
+    it("should handle malformed email input", async () => {
+      const textOnlyRes = await request(app)
+        .post("/api/auth/forgot-password")
+        .send({ email: "bademail" });
+
+      const textWithAtSignRes = await request(app)
+        .post("/api/auth/forgot-password")
+        .send({ email: "bademail@badending" });
+
+      const textWithAtSignWithoutDotRes = await request(app)
+        .post("/api/auth/forgot-password")
+        .send({ email: "bademail@.baddoamin" });
+
+      expect(textOnlyRes.status).toBe(400);
+      expect(textOnlyRes.body.success).toBe(false);
+      expect(textWithAtSignRes.status).toBe(400);
+      expect(textWithAtSignRes.body.success).toBe(false);
+      expect(textWithAtSignWithoutDotRes.status).toBe(400);
+      expect(textWithAtSignWithoutDotRes.body.success).toBe(false);
+    });
+
+    it("should return JSON with error message on failure", async () => {
+      const res = await request(app)
+        .post("/api/auth/forgot-password")
+        .send({ email: "unknown@example.com" });
+
       expect(res.status).toBe(404);
+      expect(res.body).toHaveProperty("message");
+      expect(res.body.success).toBe(false);
+    });
+
+    it("should not allow reset if rate limit exceeded", async () => {
+      for (let i = 0; i < 5; i++) {
+        await request(app)
+          .post("/api/auth/forgot-password")
+          .send({ email: testUser.email });
+      }
+
+      const res = await request(app)
+        .post("/api/auth/forgot-password")
+        .send({ email: testUser.email });
+
+      expect(res.status).toBe(429);
       expect(res.body.success).toBe(false);
     });
   });

@@ -1,236 +1,217 @@
-# Authentication API
+# 🔐 Secure Authentication API
 
-A secure Express.js API with authentication endpoints and comprehensive validation.
+A robust and secure authentication API that provides comprehensive user management functionality with rate limiting and security features.
 
-## Features
+## 📋 Table of Contents
 
-- User registration with email and password validation
-- Login with rate limiting
-- Protected routes with JWT authentication
-- Password reset functionality
-- Logout mechanism
-- Comprehensive test suite
+- [Features](#-features)
+- [API Endpoints](#-api-endpoints)
+- [Authentication](#-authentication)
+- [Rate Limiting](#-rate-limiting)
+- [Security Requirements](#-security-requirements)
+- [Installation](#-installation)
+- [Usage](#-usage)
+- [Error Handling](#-error-handling)
+- [Club Information](#-club-information)
+- [Support](#-support)
+- [Contributing](#-contributing)
+- [License](#-license)
 
-## Prerequisites
 
-- Node.js (v14 or higher)
-- npm or yarn
+## 🌐 API Endpoints
 
-## Installation
+| Endpoint           | Method | Description           | Auth Required |
+| ------------------ | ------ | --------------------- | ------------- |
+| `/login`           | POST   | User authentication   | ❌            |
+| `/register`        | POST   | New user registration | ❌            |
+| `/logout`          | POST   | User logout           | ✅            |
+| `/protected`       | GET    | Protected resource    | ✅            |
+| `/forget-password` | POST   | Password recovery     | ❌            |
+| `/profile`         | GET    | User profile          | ✅            |
 
-1. Clone the repository
-2. Install dependencies:
-   ```bash
-   npm install
-   ```
-3. Create a `.env` file in the root directory with the following variables:
-   ```
-   PORT=3000
-   JWT_SECRET=your-secret-key
-   ```
-4. Start the development server:
-   ```bash
-   npm run dev
-   ```
+## Detailed Endpoint Documentation
 
-## API Documentation
+#### 🔑 Authentication Endpoints
 
-### Authentication Endpoints
-
-#### Register User
+### Login
 
 ```http
-POST /api/auth/register
+POST /login
 Content-Type: application/json
 
 {
-  "email": "user@example.com",
-  "password": "Password123!@#"
+    "email": "user@example.com",
+    "password": "StrongPass123!"
 }
 ```
 
-**Password Requirements:**
+**Requirements:**
 
-- Minimum 8 characters
-- At least one letter
-- At least one number
-- At least one special character
+- Email validation (must be valid email format)
+- Password validation (min 8 characters, special chars, numbers, uppercase)
+- Email existence check
+- Password correctness verification
+- Rate limit: 3 requests per minute
+- Returns JWT token on success
 
 **Response:**
 
 ```json
 {
-  "success": true,
-  "message": "Registration successful",
-  "user": {
-    "id": "uuid",
-    "email": "user@example.com"
-  }
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "message": "Login successful"
 }
 ```
 
-#### Login
+### Register
 
 ```http
-POST /api/auth/login
+POST /register
 Content-Type: application/json
 
 {
-  "email": "user@example.com",
-  "password": "Password123!@#"
+    "email": "user@example.com",
+    "password": "StrongPass123!"
 }
 ```
 
-**Rate Limiting:**
+**Requirements:**
 
-- Maximum 3 attempts per hour per email
+- Email validation (must be valid email format)
+- Password validation (min 8 characters, special chars, numbers, uppercase)
+- Email uniqueness check
+- Returns JWT token on success
 
 **Response:**
 
 ```json
 {
-  "success": true,
-  "message": "Login successful",
-  "token": "jwt-token",
-  "user": {
-    "id": "uuid",
-    "email": "user@example.com"
-  }
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "message": "Registration successful"
 }
 ```
 
-#### Protected Route
+#### 🔒 Protected Endpoints
+
+### Logout
 
 ```http
-GET /api/auth/protected
-Authorization: Bearer <jwt-token>
+POST /logout
+Authorization: Bearer <token>
 ```
 
 **Response:**
 
 ```json
 {
-  "success": true,
-  "message": "This is a protected route",
-  "user": {
-    "id": "uuid",
-    "email": "user@example.com"
-  }
-}
-```
-
-#### Logout
-
-```http
-POST /api/auth/logout
-Content-Type: application/json
-
-{
-  "email": "user@example.com"
-}
-```
-
-**Response:**
-
-```json
-{
-  "success": true,
   "message": "Logged out successfully"
 }
 ```
 
-#### Forgot Password
+### Protected Route
 
 ```http
-POST /api/auth/forgot-password
-Content-Type: application/json
-
-{
-  "email": "user@example.com"
-}
+GET /protected
+Authorization: Bearer <token>
 ```
 
 **Response:**
 
 ```json
 {
-  "success": true,
-  "message": "Password reset token generated",
-  "resetToken": "reset-token"
+  "message": "This is a protected route",
+  "data": {}
 }
 ```
 
-#### Reset Password
+### Profile
 
 ```http
-POST /api/auth/reset-password
-Content-Type: application/json
-
-{
-  "token": "reset-token",
-  "newPassword": "NewPassword123!@#"
-}
+GET /profile
+Authorization: Bearer <token>
 ```
 
 **Response:**
 
 ```json
 {
-  "success": true,
-  "message": "Password reset successful"
+  "email": "user@example.com",
+  "profile": {}
 }
 ```
 
-## Error Responses
+#### 🔄 Password Management
 
-All endpoints return error responses in the following format:
+### Forget Password
+
+```http
+POST /forget-password
+Content-Type: application/json
+
+{
+    "email": "user@example.com"
+}
+```
+
+**Requirements:**
+
+- Rate limit: 3 requests per minute
+- Returns success message regardless of email existence
+- Handles malformed email addresses
+- Returns JSON error message on failure
+
+**Response:**
 
 ```json
 {
-  "success": false,
-  "message": "Error message"
+  "message": "If an account exists with this email, you will receive a password reset link"
 }
 ```
 
-Common HTTP Status Codes:
 
-- 200: Success
-- 201: Created
-- 400: Bad Request
-- 401: Unauthorized
-- 404: Not Found
-- 429: Too Many Requests
+## 🏢 Club Information
 
-## Testing
+### About Our Club
 
-Run the test suite:
+Welcome to our development club! We are a community of passionate developers working together to create secure and efficient solutions.
 
-```bash
-npm test
-```
+### Club Resources
 
-Run tests in watch mode:
+- 📚 [Club Documentation](https://club-docs.example.com)
+- 🎓 [Learning Resources](https://club-learning.example.com)
+- 👥 [Member Directory](https://club-members.example.com)
+- 📅 [Event Calendar](https://club-events.example.com)
 
-```bash
-npm run test:watch
-```
+### Club Guidelines
 
-## Security Features
+1. Respect all members and their contributions
+2. Follow security best practices
+3. Participate in code reviews
+4. Share knowledge and resources
+5. Attend regular meetings and workshops
 
-1. Password hashing using bcrypt
-2. JWT-based authentication
-3. Rate limiting for login attempts
-4. Input validation for email and password
-5. Secure password reset flow
-6. CORS enabled
-7. Environment variable configuration
+### Contact Information
 
-## Production Considerations
+- 📧 Email: club@example.com
+- 💬 Discord: [Join our server](https://discord.example.com)
+- 📱 WhatsApp: [Join our group](https://wa.me/example)
 
-1. Use a proper database instead of in-memory storage
-2. Implement proper email service for password reset
-3. Use HTTPS in production
-4. Set up proper logging
-5. Implement request validation middleware
-6. Add API documentation using Swagger/OpenAPI
-7. Set up proper error handling middleware
+## 🤝 Contributing
+
+This is a GitHub Classroom template. To contribute:
+
+1. Clone the repository
+2. Create a new branch for your feature
+3. Make your changes
+4. Test your changes thoroughly
+5. Push your changes to the main branch
+6. Create a pull request with a detailed description of your changes
+
+**Important Notes:**
+
+- All contributions must be pushed to the main branch
+- Ensure your code follows our security guidelines
+- Include tests for new features
+- Update documentation as needed
+
+// ... existing code ...
