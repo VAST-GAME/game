@@ -1,4 +1,5 @@
-import axios, { AxiosError } from "axios";
+import axios from "axios";
+import type { AxiosError } from "axios/index";
 import dotenv from "dotenv";
 
 dotenv.config();
@@ -34,8 +35,8 @@ export async function isServerAvailable(
 }
 
 export function handleApiError(error: unknown): never {
-  if (axios.isAxiosError(error)) {
-    const axiosError = error as AxiosError;
+  if (error && typeof error === "object" && "isAxiosError" in error) {
+    const axiosError = error as AxiosError<{ message?: string }>;
 
     // Handle connection refused error
     if (axiosError.code === "ECONNREFUSED") {
