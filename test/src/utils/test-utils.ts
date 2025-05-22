@@ -1,4 +1,4 @@
-import axios from "axios";
+import { apiRequest } from "./api-utils";
 import dotenv from "dotenv";
 
 dotenv.config();
@@ -6,9 +6,8 @@ dotenv.config();
 export const API_BASE_URL = "http://localhost:8000";
 
 interface AuthResponse {
-  token: string;
   success: boolean;
-  message?: string;
+  token: string;
 }
 
 export const testUser = {
@@ -17,16 +16,21 @@ export const testUser = {
 };
 
 export const getAuthToken = async () => {
-  const loginRes = await axios.post<AuthResponse>(
-    `${API_BASE_URL}/api/auth/login`,
-    testUser
-  );
-  return loginRes.data.token;
+  const loginRes = await apiRequest<AuthResponse>({
+    method: "post",
+    url: "/api/auth/login",
+    data: testUser,
+  });
+  return loginRes.token;
 };
 
 export const createTestUser = async () => {
   try {
-    await axios.post(`${API_BASE_URL}/api/auth/register`, testUser);
+    await apiRequest({
+      method: "post",
+      url: "/api/auth/register",
+      data: testUser,
+    });
   } catch (error) {
     // User might already exist, which is fine
   }
@@ -34,7 +38,9 @@ export const createTestUser = async () => {
 
 export const deleteTestUser = async (token: string) => {
   try {
-    await axios.delete(`${API_BASE_URL}/api/auth/profile`, {
+    await apiRequest({
+      method: "delete",
+      url: "/api/auth/profile",
       headers: { Authorization: `Bearer ${token}` },
     });
   } catch (error) {

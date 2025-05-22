@@ -1,22 +1,16 @@
 import { describe, it, expect } from "vitest";
-import axios from "axios";
-import dotenv from "dotenv";
-
-dotenv.config();
-
-const API_BASE_URL = "http://localhost:8000";
+import { apiRequest } from "../utils/api-utils";
+import { testUser } from "../utils/test-utils";
 
 describe("Login API - Valid Login", () => {
-  const testUser = {
-    email: "test@example.com",
-    password: "Test123!@#",
-  };
-
   it("should login with valid credentials", async () => {
-    const res = await axios.post(`${API_BASE_URL}/api/auth/login`, testUser);
+    const res = await apiRequest<{ success: boolean; token: string }>({
+      method: "post",
+      url: "/api/auth/login",
+      data: testUser,
+    });
 
-    expect(res.status).toBe(200);
-    expect(res.data.success).toBe(true);
-    expect(res.data.token).toBeDefined();
+    expect(res.success).toBe(true);
+    expect(res.token).toBeDefined();
   });
 });

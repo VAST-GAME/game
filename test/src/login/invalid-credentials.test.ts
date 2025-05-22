@@ -1,10 +1,5 @@
 import { describe, it, expect } from "vitest";
-import axios from "axios";
-import dotenv from "dotenv";
-
-dotenv.config();
-
-const API_BASE_URL = "http://localhost:8000";
+import { apiRequest, ApiError } from "../utils/api-utils";
 
 describe("Login API - Invalid Credentials", () => {
   const testUser = {
@@ -14,12 +9,16 @@ describe("Login API - Invalid Credentials", () => {
 
   it("should fail with invalid credentials", async () => {
     try {
-      await axios.post(`${API_BASE_URL}/api/auth/login`, testUser);
+      await apiRequest({
+        method: "post",
+        url: "/api/auth/login",
+        data: testUser,
+      });
       expect.fail("Should have thrown an error");
-    } catch (error: any) {
-      expect(error.response.status).toBe(401);
-      expect(error.response.data.success).toBe(false);
-      expect(error.response.data.message).toBe("Invalid credentials");
+    } catch (error) {
+      expect(error).toBeInstanceOf(ApiError);
+      expect(error.message).toContain("401");
+      expect(error.message).toContain("Invalid credentials");
     }
   });
 });
