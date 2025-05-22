@@ -1,6 +1,6 @@
 # 🚀 V.A.S.T. Event Coding Hackathon 👨🏻‍💻
 
-![V.A.S.T. Hackathon](/banner.jpg)
+![V.A.S.T. Hackathon](/assets/banner.jpg)
 
 ## 📑 Table of Contents
 
@@ -522,8 +522,8 @@ Select your preferred programming language and framework. Here are some recommen
 <table>
   <tr>
     <td align="center">
-      <a href="https://github.com/mohammadmghn">
-        <img src="https://github.com/mohammad-mghn.png" width="80px;" alt="Mohammad Mohagheghian" style="border-radius: 50%;"/>
+      <a href="https://github.com/mohammad-mghn">
+        <img src="https://github.com/mohammad-mghn.png" width="80px;" alt="Mohammad Mohagheghian" style="border-radius: 50%;"/> 
       </a>
     </td>
      <td align="center">
