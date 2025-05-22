@@ -1,34 +1,32 @@
 import { describe, it, expect } from "vitest";
-import axios from "axios";
-import dotenv from "dotenv";
-
-dotenv.config();
-
-const API_BASE_URL = "http://localhost:8000";
+import { apiRequest, ApiError } from "../utils/api-utils";
 
 describe("Password Reset API - Security Measures", () => {
   it("should not reveal email existence", async () => {
-    const res = await axios.post(`${API_BASE_URL}/api/auth/forget-password`, {
-      email: "nonexistent@example.com",
+    const res = await apiRequest<{ success: boolean; message: string }>({
+      method: "post",
+      url: "/api/auth/forget-password",
+      data: { email: "nonexistent@example.com" },
     });
 
-    expect(res.status).toBe(200);
-    expect(res.data.success).toBe(true);
-    expect(res.data.message).toBe(
+    expect(res.success).toBe(true);
+    expect(res.message).toBe(
       "If an account exists, a password reset token has been sent"
     );
   });
 
   it("should handle malformed inputs", async () => {
     try {
-      await axios.post(`${API_BASE_URL}/api/auth/forget-password`, {
-        email: "",
+      await apiRequest({
+        method: "post",
+        url: "/api/auth/forget-password",
+        data: { email: "" },
       });
       expect.fail("Should have thrown an error");
-    } catch (error: any) {
-      expect(error.response.status).toBe(400);
-      expect(error.response.data.success).toBe(false);
-      expect(error.response.data.message).toBe("Email is required");
+    } catch (error) {
+      expect(error).toBeInstanceOf(ApiError);
+      expect(error.message).toContain("400");
+      expect(error.message).toContain("Email is required");
     }
   });
 });
