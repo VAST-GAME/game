@@ -1,5 +1,5 @@
 export const TEST_TIMEOUT = 10000; // 10 seconds
-export const RATE_LIMIT = 3; // requests per minute
+export const RATE_LIMIT = 4; // requests per minute
 export const RATE_LIMIT_WINDOW = 60000; // 1 minute in milliseconds
 
 export const INVALID_TOKEN =
