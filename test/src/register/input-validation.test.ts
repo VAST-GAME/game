@@ -1,10 +1,5 @@
 import { describe, it, expect } from "vitest";
-import axios from "axios";
-import dotenv from "dotenv";
-
-dotenv.config();
-
-const API_BASE_URL = "http://localhost:8000";
+import { apiRequest, ApiError } from "../utils/api-utils";
 
 describe("Registration API - Input Validation", () => {
   it("should validate input format", async () => {
@@ -20,10 +15,15 @@ describe("Registration API - Input Validation", () => {
 
     for (const testCase of testCases) {
       try {
-        await axios.post(`${API_BASE_URL}/api/auth/register`, testCase);
-      } catch (error: any) {
-        expect(error.response.status).toBe(400);
-        expect(error.response.data.success).toBe(false);
+        await apiRequest({
+          method: "post",
+          url: "/api/auth/register",
+          data: testCase,
+        });
+        expect.fail("Should have thrown an error");
+      } catch (error) {
+        expect(error).toBeInstanceOf(ApiError);
+        expect(error.message).toContain("400");
       }
     }
   });

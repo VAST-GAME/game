@@ -1,36 +1,38 @@
-import { describe, it, expect } from "vitest";
-import axios from "axios";
-import dotenv from "dotenv";
-
-dotenv.config();
-
-const API_BASE_URL = "http://localhost:8000";
+import { describe, it, expect, beforeAll } from "vitest";
+import { apiRequest, isServerAvailable } from "../utils/api-utils";
+import { testUser } from "../utils/test-utils";
 
 describe("Logout API - Successful Logout", () => {
   let authToken: string;
 
   beforeAll(async () => {
+    const isAvailable = await isServerAvailable();
+    if (!isAvailable) {
+      throw new Error(
+        "API server is not available. Please make sure the server is running on port 8000."
+      );
+    }
+
     // Login to get a valid token
-    const loginRes = await axios.post(`${API_BASE_URL}/api/auth/login`, {
-      email: "test@example.com",
-      password: "Test123!@#",
+    const loginRes = await apiRequest<{ success: boolean; token: string }>({
+      method: "post",
+      url: "/api/auth/login",
+      data: testUser,
     });
-    authToken = loginRes.data.token;
+
+    authToken = loginRes.token;
   });
 
   it("should logout successfully", async () => {
-    const res = await axios.post(
-      `${API_BASE_URL}/api/auth/logout`,
-      {},
-      {
-        headers: {
-          Authorization: `Bearer ${authToken}`,
-        },
-      }
-    );
+    const res = await apiRequest<{ success: boolean; message: string }>({
+      method: "post",
+      url: "/api/auth/logout",
+      headers: {
+        Authorization: `Bearer ${authToken}`,
+      },
+    });
 
-    expect(res.status).toBe(200);
-    expect(res.data.success).toBe(true);
-    expect(res.data.message).toBe("Logged out successfully");
+    expect(res.success).toBe(true);
+    expect(res.message).toBe("Logged out successfully");
   });
 });

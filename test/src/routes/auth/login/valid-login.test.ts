@@ -22,9 +22,8 @@ describe("Login API - Valid Login", () => {
   it("should login with valid credentials", async () => {
     const res = await axios.post(`${API_BASE_URL}/api/auth/login`, testUser);
 
-    expect(res.status).toBe(TEST_RESPONSES.SUCCESS.status);
-    expect(res.data.success).toBe(TEST_RESPONSES.SUCCESS.success);
+    expect(res?.status).toBe(TEST_RESPONSES.SUCCESS.status);
+    expect(res.data?.success).toBe(TEST_RESPONSES.SUCCESS.success);
     expect(res.data.token).toBeDefined();
   });
 });
- 

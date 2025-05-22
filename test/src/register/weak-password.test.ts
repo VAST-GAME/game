@@ -1,26 +1,22 @@
 import { describe, it, expect } from "vitest";
-import axios from "axios";
-import dotenv from "dotenv";
-
-dotenv.config();
-
-const API_BASE_URL = "http://localhost:8000";
+import { apiRequest, ApiError } from "../utils/api-utils";
 
 describe("Registration API - Weak Password", () => {
-  const testUser = {
-    email: "test@example.com",
-    password: "Test123!@#",
-  };
-
   it("should not register with weak password", async () => {
     try {
-      await axios.post(`${API_BASE_URL}/api/auth/register`, {
-        email: "test2@example.com",
-        password: "weak",
+      await apiRequest({
+        method: "post",
+        url: "/api/auth/register",
+        data: {
+          email: "test2@example.com",
+          password: "weak",
+        },
       });
-    } catch (error: any) {
-      expect(error.response.status).toBe(400);
-      expect(error.response.data.success).toBe(false);
+      expect.fail("Should have thrown an error");
+    } catch (error) {
+      expect(error).toBeInstanceOf(ApiError);
+      expect(error.message).toContain("400");
+      expect(error.message).toContain("Password is too weak");
     }
   });
 });

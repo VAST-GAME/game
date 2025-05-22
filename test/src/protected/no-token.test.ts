@@ -1,20 +1,18 @@
 import { describe, it, expect } from "vitest";
-import axios from "axios";
-import dotenv from "dotenv";
-
-dotenv.config();
-
-const API_BASE_URL = "http://localhost:8000";
+import { apiRequest, ApiError } from "../utils/api-utils";
 
 describe("Protected Route API - No Token", () => {
   it("should reject access without token", async () => {
     try {
-      await axios.get(`${API_BASE_URL}/api/auth/protected`);
+      await apiRequest({
+        method: "get",
+        url: "/api/auth/protected",
+      });
       expect.fail("Should have thrown an error");
-    } catch (error: any) {
-      expect(error.response.status).toBe(401);
-      expect(error.response.data.success).toBe(false);
-      expect(error.response.data.message).toBe("No token provided");
+    } catch (error) {
+      expect(error).toBeInstanceOf(ApiError);
+      expect(error.message).toContain("401");
+      expect(error.message).toContain("No token provided");
     }
   });
 });

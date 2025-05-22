@@ -1,32 +1,38 @@
 import { describe, it, expect, beforeAll } from "vitest";
-import axios from "axios";
-import dotenv from "dotenv";
-
-dotenv.config();
-
-const API_BASE_URL = "http://localhost:8000";
+import { apiRequest, waitForServer } from "../utils/api-utils";
+import { testUser } from "../utils/test-utils";
 
 describe("Protected Route API - Valid Token", () => {
   let authToken: string;
 
   beforeAll(async () => {
+    const isAvailable = await waitForServer();
+    if (!isAvailable) {
+      throw new Error(
+        "API server is not available after waiting. Please make sure the server is running on port 8000."
+      );
+    }
+
     // Login to get a valid token
-    const loginRes = await axios.post(`${API_BASE_URL}/api/auth/login`, {
-      email: "test@example.com",
-      password: "Test123!@#",
+    const loginRes = await apiRequest<{ success: boolean; token: string }>({
+      method: "post",
+      url: "/api/auth/login",
+      data: testUser,
     });
-    authToken = loginRes.data.token;
+
+    authToken = loginRes.token;
   });
 
   it("should access protected route with valid token", async () => {
-    const res = await axios.get(`${API_BASE_URL}/api/auth/protected`, {
+    const res = await apiRequest<{ success: boolean; message: string }>({
+      method: "get",
+      url: "/api/auth/protected",
       headers: {
         Authorization: `Bearer ${authToken}`,
       },
     });
 
-    expect(res.status).toBe(200);
-    expect(res.data.success).toBe(true);
-    expect(res.data.data).toBeDefined();
+    expect(res.success).toBe(true);
+    expect(res.message).toBe("Protected route accessed successfully");
   });
 });

@@ -1,20 +1,26 @@
-import { describe, it, expect } from "vitest";
-import axios from "axios";
-import dotenv from "dotenv";
-
-dotenv.config();
-
-const API_BASE_URL = "http://localhost:8000";
+import { describe, it, expect, beforeAll } from "vitest";
+import { apiRequest, waitForServer } from "../utils/api-utils";
 
 describe("Password Reset API - Generate Token", () => {
+  beforeAll(async () => {
+    const isAvailable = await waitForServer();
+    if (!isAvailable) {
+      throw new Error(
+        "API server is not available after waiting. Please make sure the server is running on port 8000."
+      );
+    }
+  });
+
   it("should generate reset token for valid email", async () => {
-    const res = await axios.post(`${API_BASE_URL}/api/auth/forget-password`, {
-      email: "test@example.com",
+    const res = await apiRequest<{ success: boolean; message: string }>({
+      method: "post",
+      url: "/api/auth/forget-password",
+      data: { email: "test@example.com" },
     });
 
-    expect(res.status).toBe(200);
-    expect(res.data.success).toBe(true);
-    expect(res.data.message).toBe("Password reset token sent");
-    expect(res.data.resetToken).toBeDefined();
+    expect(res.success).toBe(true);
+    expect(res.message).toBe(
+      "If an account exists, a password reset token has been sent"
+    );
   });
 });
