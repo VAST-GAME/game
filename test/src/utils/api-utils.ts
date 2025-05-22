@@ -1,4 +1,5 @@
-import axios, { AxiosError } from "axios";
+import axios from "axios";
+import type { AxiosError } from "axios/index";
 import dotenv from "dotenv";
 
 dotenv.config();
@@ -20,9 +21,22 @@ export async function isServerAvailable(
 ): Promise<boolean> {
   for (let i = 0; i < retries; i++) {
     try {
-      await axios.get(`${API_BASE_URL}/api/health`);
+      // Try to access the login endpoint instead of a health check
+      await axios.get(`${API_BASE_URL}/api/auth/login`);
       return true;
     } catch (error) {
+      // If we get a 404 or 405, the server is up but the endpoint doesn't exist
+      // If we get a connection refused, the server is down
+      if (error && typeof error === "object" && "isAxiosError" in error) {
+        const axiosError = error as AxiosError;
+        if (
+          axiosError.response?.status === 404 ||
+          axiosError.response?.status === 405
+        ) {
+          return true; // Server is up, endpoint just doesn't exist
+        }
+      }
+
       if (i === retries - 1) {
         return false;
       }
@@ -34,8 +48,8 @@ export async function isServerAvailable(
 }
 
 export function handleApiError(error: unknown): never {
-  if (axios.isAxiosError(error)) {
-    const axiosError = error as AxiosError;
+  if (error && typeof error === "object" && "isAxiosError" in error) {
+    const axiosError = error as AxiosError<{ message?: string }>;
 
     // Handle connection refused error
     if (axiosError.code === "ECONNREFUSED") {
